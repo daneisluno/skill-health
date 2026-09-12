@@ -33,7 +33,9 @@ for line in sys.stdin:
     except Exception: continue
     if j.get("type")=="result":
         cost=str(j.get("total_cost_usd",""))
-        ok = (not j.get("is_error")) and j.get("subtype","success")=="success"
+        st=j.get("subtype","success")
+        # max_turns = the model was still working at the cap; what it did before counts.
+        ok = st=="success" or st=="error_max_turns"
     if j.get("type")!="assistant": continue
     for b in j.get("message",{}).get("content",[]):
         if b.get("type")=="tool_use" and b.get("name")=="Skill":
@@ -49,11 +51,13 @@ quiet='{"type":"assistant","message":{"content":[{"type":"text","text":"Reading.
 dead='{"type":"assistant","message":{"content":[{"type":"text","text":"x"}]}}
 {"type":"result","is_error":true,"subtype":"error_during_execution","total_cost_usd":0}'
 sc1=$(printf '%s\n' "$fire" | parse); sc2=$(printf '%s\n' "$quiet" | parse)
-sc3=$(printf '%s\n' "$dead" | parse); sc4=$(printf '' | parse)
-if [ "$sc1" != $'alpha\t0.01' ] || [ "$sc2" != $'-\t0.02' ] || [ "${sc3%%$'\t'*}" != "ERR" ] || [ "${sc4%%$'\t'*}" != "ERR" ]; then
-  echo "SELFCHECK FAIL: parser returned [$sc1] [$sc2] [$sc3] [$sc4]"; exit 2
+capped='{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"alpha"}}]}}
+{"type":"result","subtype":"error_max_turns","is_error":true,"total_cost_usd":0.03}'
+sc3=$(printf '%s\n' "$dead" | parse); sc4=$(printf '' | parse); sc5=$(printf '%s\n' "$capped" | parse)
+if [ "$sc1" != $'alpha\t0.01' ] || [ "$sc2" != $'-\t0.02' ] || [ "${sc3%%$'\t'*}" != "ERR" ] || [ "${sc4%%$'\t'*}" != "ERR" ] || [ "$sc5" != $'alpha\t0.03' ]; then
+  echo "SELFCHECK FAIL: parser returned [$sc1] [$sc2] [$sc3] [$sc4] [$sc5]"; exit 2
 fi
-echo "  selfcheck ok (parser: fire, quiet, dead call, empty stream)"
+echo "  selfcheck ok (parser: fire, quiet, dead call, empty stream, skill seen before the turn cap)"
 
 DEBUG="${SKILL_HEALTH_DEBUG:-${TMPDIR:-/tmp}/skill-trigger-errs}"
 pass=0; fail=0; total_cost=0; errs=0; consecutive_err=0

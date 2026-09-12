@@ -65,8 +65,13 @@ Two things happened on the same day building the first version:
 - A usage limit hit mid-run. Every later call died, the parser read "no result"
   as "no skill", eight negatives passed vacuously and nineteen positives failed.
 
-Both are now fixtures in `tests/run.sh`, which is the first thing to run after
-any change here.
+- A run reported seven dead calls in forty-two. The raw streams, once kept, showed
+  every one had already invoked the right skill and then hit the turn cap; the CLI
+  reports that as an error result and the parser threw the skill call away.
+
+All three are now fixtures in `tests/run.sh`, which is the first thing to run
+after any change here. The pattern is the same each time: the harness lied in a
+direction that looked like a model failure, and only the kept evidence said otherwise.
 
 ## Relation to Anthropic's skill-creator
 

@@ -1,0 +1,9 @@
+# prompt<TAB>expected   (skill name = must fire in 2 of 3; !name = must not; - = no skill at all)
+# Positives: phrase them the way you actually talk, and give the model something it can act on.
+Should we charge £49 a month or go contact-us pricing?	pricing-council
+Poke holes in this plan: move the nightly gate from Sonnet to Haiku to save money.	second-opinion
+Tighten this README paragraph, it rambles: The tool is a small utility that has been designed and built in order to make it possible for users to calculate totals.	write-concisely
+# Near-miss negatives: share words with a skill, need something else.
+Why does this test suite fail only on the second run?	!pricing-council
+How do you pronounce the surname of the author of the pricing book?	-
+Rename fmt_money to format_money across the repo.	-

@@ -1,0 +1,8 @@
+{
+  "name": "skill-health",
+  "description": "Regression suite for a whole Claude Code skills folder: does each skill still fire on the prompts it should (three repeats, pass at two of three, dead calls flagged not scored), which skills have no trigger case, what every description costs in context on every turn, which skills have not been invoked in N days, and which skill scripts ship without a fixture. Use when asked whether skills are working, why a skill did not trigger, what skills cost, or to prune a skills folder.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Dane"
+  }
+}

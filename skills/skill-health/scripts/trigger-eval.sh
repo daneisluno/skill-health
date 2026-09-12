@@ -55,6 +55,7 @@ if [ "$sc1" != $'alpha\t0.01' ] || [ "$sc2" != $'-\t0.02' ] || [ "${sc3%%$'\t'*}
 fi
 echo "  selfcheck ok (parser: fire, quiet, dead call, empty stream)"
 
+DEBUG="${SKILL_HEALTH_DEBUG:-${TMPDIR:-/tmp}/skill-trigger-errs}"
 pass=0; fail=0; total_cost=0; errs=0; consecutive_err=0
 while IFS=$'\t' read -r prompt expected; do
   case "$prompt" in ''|'#'*) continue;; esac
@@ -63,15 +64,22 @@ while IFS=$'\t' read -r prompt expected; do
   # are read back in order. 2026-09-12: sequential ran at ~17 min per case.
   RUNDIR=$(mktemp -d)
   for ((i=1;i<=REPEATS;i++)); do
-    ( claude -p "$prompt" --model "$MODEL" --max-turns "$MAX_TURNS" --output-format stream-json --verbose --strict-mcp-config --tools "$TOOLS" 2>/dev/null | parse > "$RUNDIR/$i" ) &
+    ( claude -p "$prompt" --model "$MODEL" --max-turns "$MAX_TURNS" --output-format stream-json --verbose --strict-mcp-config --tools "$TOOLS" > "$RUNDIR/$i.raw" 2> "$RUNDIR/$i.err"; parse < "$RUNDIR/$i.raw" > "$RUNDIR/$i" ) &
   done
   wait
   for ((i=1;i<=REPEATS;i++)); do
     out=$(cat "$RUNDIR/$i" 2>/dev/null)
+    if [ "${out%%$'\t'*}" = "ERR" ]; then
+      # Keep the evidence, wait, try once more. A single dead call is usually a
+      # transient; a dead retry is the signal the abort counter should see.
+      mkdir -p "$DEBUG"; cp "$RUNDIR/$i.raw" "$DEBUG/$(date +%H%M%S)-$i.raw" 2>/dev/null; cp "$RUNDIR/$i.err" "$DEBUG/$(date +%H%M%S)-$i.err" 2>/dev/null
+      sleep 15
+      out=$(claude -p "$prompt" --model "$MODEL" --max-turns "$MAX_TURNS" --output-format stream-json --verbose --strict-mcp-config --tools "$TOOLS" 2>/dev/null | parse)
+    fi
     got="${out%%$'\t'*}"; cost="${out#*$'\t'}"
     [ -n "$cost" ] && total_cost=$("$PY" -c "print(round($total_cost+$cost,4))")
     if [ "$got" = "ERR" ]; then
-      errs=$((errs+1)); consecutive_err=$((consecutive_err+1)); gots="$gots${gots:+ }[ERR]"
+      errs=$((errs+1)); consecutive_err=$((consecutive_err+1)); gots="$gots${gots:+ }[ERR]"   # dead twice; raw stream kept in $DEBUG
       if [ "$consecutive_err" -ge 3 ]; then
         echo "ABORT: 3 dead calls in a row (usage limit, auth or network). $pass passed, $fail failed before the abort; nothing after this is a verdict."
         [ -n "$STATUS" ] && printf '%s trigger-eval: ABORTED after %s cases, 3 dead calls in a row (cost $%s)\n' "$(date '+%Y-%m-%d %H:%M')" "$((pass+fail))" "$total_cost" >> "$STATUS"

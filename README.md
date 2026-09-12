@@ -58,13 +58,12 @@ or Task Scheduler.
 
 ## Why it exists
 
-Two things happened on the same day building the first version:
+Three things happened on the same day building the first version:
 
 - A one-turn, single-run harness reported two skills broken. They were fine; the
   model reads context before it loads a skill, and one run is an anecdote.
 - A usage limit hit mid-run. Every later call died, the parser read "no result"
   as "no skill", eight negatives passed vacuously and nineteen positives failed.
-
 - A run reported seven dead calls in forty-two. The raw streams, once kept, showed
   every one had already invoked the right skill and then hit the turn cap; the CLI
   reports that as an error result and the parser threw the skill call away.

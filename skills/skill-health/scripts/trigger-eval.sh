@@ -59,8 +59,15 @@ pass=0; fail=0; total_cost=0; errs=0; consecutive_err=0
 while IFS=$'\t' read -r prompt expected; do
   case "$prompt" in ''|'#'*) continue;; esac
   hits=0; gots=""
+  # The REPEATS calls for one case run in parallel (they are independent), then
+  # are read back in order. 2026-09-12: sequential ran at ~17 min per case.
+  RUNDIR=$(mktemp -d)
   for ((i=1;i<=REPEATS;i++)); do
-    out=$(claude -p "$prompt" --model "$MODEL" --max-turns "$MAX_TURNS" --output-format stream-json --verbose --strict-mcp-config --tools "$TOOLS" 2>/dev/null | parse)
+    ( claude -p "$prompt" --model "$MODEL" --max-turns "$MAX_TURNS" --output-format stream-json --verbose --strict-mcp-config --tools "$TOOLS" 2>/dev/null | parse > "$RUNDIR/$i" ) &
+  done
+  wait
+  for ((i=1;i<=REPEATS;i++)); do
+    out=$(cat "$RUNDIR/$i" 2>/dev/null)
     got="${out%%$'\t'*}"; cost="${out#*$'\t'}"
     [ -n "$cost" ] && total_cost=$("$PY" -c "print(round($total_cost+$cost,4))")
     if [ "$got" = "ERR" ]; then
@@ -80,6 +87,7 @@ while IFS=$'\t' read -r prompt expected; do
     esac
     hits=$((hits+ok)); gots="$gots${gots:+ }[$got]"
   done
+  rm -rf "$RUNDIR"
   if [ "$hits" -ge "$MIN_PASS" ]; then pass=$((pass+1)); echo "  ok    $hits/$REPEATS $gots :: $prompt"
   else fail=$((fail+1)); echo "  FAIL  $hits/$REPEATS want=$expected $gots :: $prompt"; fi
 done < "$CASES"

@@ -26,8 +26,14 @@ a few minutes per case; run it weekly.
 claude plugin install skill-health@<your-marketplace>
 ```
 
-or clone this repo and add it with `claude --plugin-dir ./skill-health` (unverified
-from memory: check `claude plugin --help` for the current flag).
+or clone this repo and load it for a session with:
+
+```bash
+claude --plugin-dir ./skill-health
+```
+
+Verified 2026-09-13: `/skill-health coverage` invoked the skill and ran the script
+end to end from a fresh `claude -p` with that flag.
 
 Requires bash, python 3, and the `claude` CLI on PATH. Windows works under Git Bash.
 
